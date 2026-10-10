@@ -1,0 +1,13 @@
+{
+  "testRunner": "vitest",
+  "mutate": [
+    "src/**/*.ts",
+    "!src/render.ts"
+  ],
+  "reporters": [
+    "clear-text"
+  ],
+  "coverageAnalysis": "perTest",
+  "concurrency": 4,
+  "tsconfigFile": "stryker-skips-tsconfig-rewrite.json"
+}
