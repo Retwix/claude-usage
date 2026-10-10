@@ -334,7 +334,9 @@ describe("the page: by day of the week", () => {
     const page = openPage(
       oneRange({
         ...twoFeatures(),
-        weekdays: [[], [], wednesday, [], [], [], []].map((repos) => ({ repos })),
+        weekdays: [[], [], [{ date: "2026-09-30", repos: wednesday }], [], [], [], []].map(
+          (days) => ({ days }),
+        ),
       }),
     );
 

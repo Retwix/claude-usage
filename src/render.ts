@@ -414,7 +414,7 @@ ${weekdayChart(summary.weekdays)}
 const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 const dayColumn = (day: WeekdayUsage, label: string): string =>
-  `<div class="day" data-repos="${reposAttribute(day.repos)}">
+  `<div class="day" data-repos="${reposAttribute(day.days.flatMap((d) => d.repos))}">
 <div class="day-cost"></div>
 <div class="day-label">${label}</div>
 <div class="day-active"></div>

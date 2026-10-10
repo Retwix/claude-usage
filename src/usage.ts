@@ -85,8 +85,13 @@ export type UsageSummary = {
   readonly weekdays: ReadonlyArray<WeekdayUsage>;
 };
 
-export type WeekdayUsage = {
+export type DayUsage = {
+  readonly date: string;
   readonly repos: ReadonlyArray<RepoUsage>;
+};
+
+export type WeekdayUsage = {
+  readonly days: ReadonlyArray<DayUsage>;
 };
 
 export type WeekUsage = {
@@ -597,9 +602,13 @@ const weeksOf = (timelines: ReadonlyArray<Timeline>): ReadonlyArray<WeekUsage> =
 
 const weekdaysOf = (timelines: ReadonlyArray<Timeline>): ReadonlyArray<WeekdayUsage> => {
   const parts = timelines.flatMap((t) => contributions(t.moments));
-  return Array.from({ length: DAYS_IN_WEEK }, (_, weekday) => ({
-    repos: byRepo(parts.filter((p) => weekdayOf(p.at) === weekday)),
-  }));
+  return Array.from({ length: DAYS_IN_WEEK }, (_, weekday) => {
+    const byDate = Map.groupBy(
+      parts.filter((p) => weekdayOf(p.at) === weekday),
+      (p) => localDay(new Date(p.at)),
+    );
+    return { days: [...byDate].map(([date, dayParts]) => ({ date, repos: byRepo(dayParts) })) };
+  });
 };
 
 export const median = (values: ReadonlyArray<number>): number | undefined => {

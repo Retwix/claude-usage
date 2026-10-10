@@ -805,28 +805,42 @@ describe("summariseUsage: by day of the week", () => {
       ],
     });
 
-  test("adds up each weekday's cost and active time per repo within the range, Monday first", () => {
+  test("splits each weekday into the dates worked within the range, per repo, Monday first", () => {
     const { weekdays } = summariseUsage(
       [
         dayOfWork({ repo: "acme-backend", day: "2026-09-28", dollars: 8 }),
         dayOfWork({ repo: "acme-backend", day: "2026-09-30", dollars: 1 }),
-        dayOfWork({ repo: "acme-backend", day: "2026-10-07", dollars: 2 }),
         dayOfWork({ repo: "acme-frontend", day: "2026-10-04", dollars: 4 }),
+        dayOfWork({ repo: "acme-backend", day: "2026-10-07", dollars: 2 }),
       ],
       { since: new Date("2026-09-29T00:00:00Z") },
     );
 
     expect(weekdays).toMatchObject([
-      { repos: [] },
-      { repos: [] },
+      { days: [] },
+      { days: [] },
       {
-        repos: [{ repo: "acme-backend", costUsd: expect.closeTo(3), activeSeconds: 240 }],
+        days: [
+          {
+            date: "2026-09-30",
+            repos: [{ repo: "acme-backend", costUsd: expect.closeTo(1), activeSeconds: 120 }],
+          },
+          {
+            date: "2026-10-07",
+            repos: [{ repo: "acme-backend", costUsd: expect.closeTo(2), activeSeconds: 120 }],
+          },
+        ],
       },
-      { repos: [] },
-      { repos: [] },
-      { repos: [] },
+      { days: [] },
+      { days: [] },
+      { days: [] },
       {
-        repos: [{ repo: "acme-frontend", costUsd: expect.closeTo(4), activeSeconds: 120 }],
+        days: [
+          {
+            date: "2026-10-04",
+            repos: [{ repo: "acme-frontend", costUsd: expect.closeTo(4), activeSeconds: 120 }],
+          },
+        ],
       },
     ]);
   });
