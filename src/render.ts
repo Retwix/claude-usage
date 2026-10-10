@@ -7,6 +7,7 @@ import {
   type RepoUsage,
   type SkillUsage,
   type UsageSummary,
+  type WeekdayUsage,
   type WeekUsage,
 } from "./usage.ts";
 
@@ -390,6 +391,7 @@ ${tile("thinking", "Thinking", formatCost(sum(features.map((f) => f.thinkingCost
 ${tile("start", "Session start (tokens)", formatTokens(summary.sessionStartTokens))}
 </div>
 ${costDonut(features)}
+${weekdayChart(summary.weekdays)}
 <div class="panel">
 <table class="features">
 <thead><tr>
@@ -408,6 +410,21 @@ ${costDonut(features)}
 </div>
 </section>`;
 };
+
+const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+const dayColumn = (day: WeekdayUsage, label: string): string =>
+  `<div class="day" data-repos="${reposAttribute(day.repos)}">
+<div class="day-cost"></div>
+<div class="day-label">${label}</div>
+<div class="day-active"></div>
+</div>`;
+
+const weekdayChart = (weekdays: ReadonlyArray<WeekdayUsage>): string =>
+  `<div class="panel chart" aria-label="Cost and active time by day of the week">
+<h2>By day of the week · cost above, active time below</h2>
+<div class="days">${weekdays.map((d, i) => dayColumn(d, WEEKDAY_LABELS[i] ?? "")).join("")}</div>
+</div>`;
 
 const weekColumn = (week: WeekUsage, maxCost: number, order: ReadonlyArray<string>): string => {
   const cost = sum(week.repos.map((r) => r.costUsd));
@@ -522,14 +539,14 @@ h2 { font-size: 13px; font-weight: 500; color: var(--ink-2); margin: 0 0 12px; }
 table.tools { min-width: 0; }
 table.tools th { cursor: default; }
 .insights li ul { margin: 4px 0 6px; color: var(--ink-2); }
-.weeks { display: flex; align-items: flex-end; gap: 6px; }
-.week { flex: 1; min-width: 28px; display: flex; flex-direction: column; align-items: stretch; }
-.week-total { text-align: center; font-size: 11px; color: var(--ink-2); font-variant-numeric: tabular-nums; margin-bottom: 4px; white-space: nowrap; }
+.weeks, .days { display: flex; align-items: flex-end; gap: 6px; }
+.week, .day { flex: 1; min-width: 28px; display: flex; flex-direction: column; align-items: stretch; }
+.week-total, .day-cost, .day-active { text-align: center; font-size: 11px; color: var(--ink-2); font-variant-numeric: tabular-nums; margin-bottom: 4px; white-space: nowrap; }
 .week-plot { height: 140px; display: flex; flex-direction: column-reverse; gap: 2px; border-bottom: 1px solid var(--grid); }
 .wseg { display: block; min-height: 2px; }
 .wseg:last-child { border-radius: 4px 4px 0 0; }
 .wseg:hover, .wseg:focus { filter: brightness(1.15); outline: none; }
-.week-label { text-align: center; font-size: 11px; color: var(--muted); margin-top: 4px; white-space: nowrap; }
+.week-label, .day-label { text-align: center; font-size: 11px; color: var(--muted); margin-top: 4px; white-space: nowrap; }
 table { width: 100%; border-collapse: collapse; min-width: 1240px; }
 th { text-align: left; font-weight: 500; font-size: 12px; color: var(--ink-2); padding: 10px 12px;
   border-bottom: 1px solid var(--grid); cursor: pointer; user-select: none; white-space: nowrap; }
@@ -617,6 +634,12 @@ const sum = (values) => values.reduce((a, b) => a + b, 0);
 const visibleRepos = (el) => JSON.parse(el.dataset.repos).filter((r) => !hidden.has(r.repo));
 const setCell = (td, sortValue, text) => { td.dataset.sort = sortValue; td.textContent = text; };
 
+const applyToDays = (section) => section.querySelectorAll(".day").forEach((day) => {
+  const repos = visibleRepos(day);
+  day.querySelector(".day-cost").textContent = formatCost(sum(repos.map((r) => r.costUsd)));
+  day.querySelector(".day-active").textContent = formatDuration(sum(repos.map((r) => r.activeSeconds)));
+});
+
 const applyToRange = (section) => {
   const shown = [...section.querySelectorAll("table.features tbody tr")].flatMap((tr) => {
     const all = JSON.parse(tr.dataset.repos);
@@ -669,6 +692,7 @@ const applyToRange = (section) => {
     li.querySelector(".kind-share").textContent = formatShare(kindTotals[i], kindSum);
   });
   section.querySelector(".donut-total").textContent = formatCost(kindSum);
+  applyToDays(section);
   const shownFeatures = new Set(shown.map((r) => r.tr.dataset.feature));
   section.querySelectorAll(".insights li[data-feature]").forEach((li) => { li.hidden = !shownFeatures.has(li.dataset.feature); });
 };

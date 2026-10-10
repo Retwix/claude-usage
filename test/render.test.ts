@@ -131,6 +131,13 @@ const openPage = (report: Report, storage: ReadonlyMap<string, string> = new Map
     weekCompare: () => text(document.querySelector(".week-compare")),
     costBreakdown: () =>
       [...(shownRange()?.querySelectorAll(".donut-legend li") ?? [])].map((li) => text(li)),
+    weekday: (label: string) =>
+      [...(shownRange()?.querySelectorAll(".day") ?? [])]
+        .filter((day) => text(day.querySelector(".day-label")) === label)
+        .map((day) => [
+          text(day.querySelector(".day-cost")),
+          text(day.querySelector(".day-active")),
+        ]),
     weekTotal: (weekStart: string) =>
       text(document.querySelector(`[data-week="${weekStart}"] .week-total`)),
     features: () => shownRows().map((tr) => tr.dataset["feature"]),
@@ -318,6 +325,22 @@ describe("the page: weekly chart", () => {
     page.toggle("acme-docs");
 
     expect(page.weekTotal("2026-09-28")).toBe("$40");
+  });
+});
+
+describe("the page: by day of the week", () => {
+  test("each day's cost and active time leave out hidden repos", () => {
+    const wednesday = [repoUsage("acme-backend", 40, 2), repoUsage("acme-docs", 20, 1)];
+    const page = openPage(
+      oneRange({
+        ...twoFeatures(),
+        weekdays: [[], [], wednesday, [], [], [], []].map((repos) => ({ repos })),
+      }),
+    );
+
+    page.toggle("acme-docs");
+
+    expect(page.weekday("Wed")).toEqual([["$40", "2.0 h"]]);
   });
 });
 
