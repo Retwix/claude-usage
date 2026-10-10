@@ -791,3 +791,43 @@ describe("weeklyUsage", () => {
     ]);
   });
 });
+
+describe("summariseUsage: by day of the week", () => {
+  const dayOfWork = ({ repo, day, dollars }: { repo: string; day: string; dollars: number }) =>
+    session({
+      records: [
+        cyclePrompt({ slug: "auth", at: `${day}T12:00:00Z` }),
+        assistant({
+          at: `${day}T12:02:00Z`,
+          cwd: worktree(repo, "auth"),
+          tokens: costing(dollars),
+        }),
+      ],
+    });
+
+  test("adds up each weekday's cost and active time per repo within the range, Monday first", () => {
+    const { weekdays } = summariseUsage(
+      [
+        dayOfWork({ repo: "acme-backend", day: "2026-09-28", dollars: 8 }),
+        dayOfWork({ repo: "acme-backend", day: "2026-09-30", dollars: 1 }),
+        dayOfWork({ repo: "acme-backend", day: "2026-10-07", dollars: 2 }),
+        dayOfWork({ repo: "acme-frontend", day: "2026-10-04", dollars: 4 }),
+      ],
+      { since: new Date("2026-09-29T00:00:00Z") },
+    );
+
+    expect(weekdays).toMatchObject([
+      { repos: [] },
+      { repos: [] },
+      {
+        repos: [{ repo: "acme-backend", costUsd: expect.closeTo(3), activeSeconds: 240 }],
+      },
+      { repos: [] },
+      { repos: [] },
+      { repos: [] },
+      {
+        repos: [{ repo: "acme-frontend", costUsd: expect.closeTo(4), activeSeconds: 120 }],
+      },
+    ]);
+  });
+});

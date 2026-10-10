@@ -82,6 +82,11 @@ export type UsageSummary = {
   readonly sessionStartTokens: number | undefined;
   readonly skills: ReadonlyArray<SkillUsage>;
   readonly agents: ReadonlyArray<AgentUsage>;
+  readonly weekdays: ReadonlyArray<WeekdayUsage>;
+};
+
+export type WeekdayUsage = {
+  readonly repos: ReadonlyArray<RepoUsage>;
 };
 
 export type WeekUsage = {
@@ -559,9 +564,13 @@ const localDay = (date: Date): string =>
     .map((n) => String(n).padStart(2, "0"))
     .join("-");
 
+const DAYS_IN_WEEK = 7;
+
+const weekdayOf = (at: number): number => (new Date(at).getDay() + 6) % DAYS_IN_WEEK;
+
 const mondayOf = (at: number): Date => {
   const day = new Date(at);
-  return new Date(day.getFullYear(), day.getMonth(), day.getDate() - ((day.getDay() + 6) % 7));
+  return new Date(day.getFullYear(), day.getMonth(), day.getDate() - weekdayOf(at));
 };
 
 const weekStarts = (first: Date, last: Date): ReadonlyArray<string> => {
@@ -583,6 +592,13 @@ const weeksOf = (timelines: ReadonlyArray<Timeline>): ReadonlyArray<WeekUsage> =
   return weekStarts(first, last).map((weekStart) => ({
     weekStart,
     repos: byRepo(byWeek.get(weekStart) ?? []),
+  }));
+};
+
+const weekdaysOf = (timelines: ReadonlyArray<Timeline>): ReadonlyArray<WeekdayUsage> => {
+  const parts = timelines.flatMap((t) => contributions(t.moments));
+  return Array.from({ length: DAYS_IN_WEEK }, (_, weekday) => ({
+    repos: byRepo(parts.filter((p) => weekdayOf(p.at) === weekday)),
   }));
 };
 
@@ -656,6 +672,7 @@ const summaryOf = (
     sessionStartTokens: median(inRange.flatMap((t) => sessionStart(t.moments))),
     skills: skillsOf(all),
     agents: agentsOf(all),
+    weekdays: weekdaysOf(inRange),
   };
 };
 

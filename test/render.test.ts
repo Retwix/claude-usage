@@ -88,6 +88,7 @@ const twoFeatures = (): UsageSummary => ({
   sessionStartTokens: undefined,
   skills: [],
   agents: [],
+  weekdays: [],
 });
 
 const oneRange = (summary: UsageSummary, weeks: ReadonlyArray<WeekUsage> = []): Report => ({
@@ -163,6 +164,7 @@ describe("renderReport", () => {
         sessionStartTokens: undefined,
         skills: [],
         agents: [],
+        weekdays: [],
       }),
       { generatedAt: GENERATED_AT },
     );
@@ -233,6 +235,7 @@ describe("the page: date ranges", () => {
           sessionStartTokens: undefined,
           skills: [],
           agents: [],
+          weekdays: [],
         },
       },
       { id: "30d", label: "Last 30 days", summary: twoFeatures() },
@@ -287,6 +290,7 @@ describe("the page: shares follow the repos shown", () => {
         sessionStartTokens: undefined,
         skills: [],
         agents: [],
+        weekdays: [],
       }),
     );
 
@@ -333,6 +337,7 @@ describe("the page: what stands out", () => {
         sessionStartTokens: undefined,
         skills: [],
         agents: [],
+        weekdays: [],
       }),
     );
 
@@ -355,6 +360,7 @@ describe("the page: what stands out", () => {
         sessionStartTokens: undefined,
         skills: [],
         agents: [],
+        weekdays: [],
       }),
     );
     const namesDesign = () => page.standsOut().some((line) => line?.startsWith("design"));
@@ -400,6 +406,7 @@ describe("the page: context and tools", () => {
         sessionStartTokens: 54_000,
         skills: [],
         agents: [],
+        weekdays: [],
       }),
     );
 
@@ -417,6 +424,7 @@ describe("the page: context and tools", () => {
         sessionStartTokens: 54_000,
         skills: [{ skill: "tdd", loads: 3, tokens: 4_000, rereadCostUsd: 2 }],
         agents: [],
+        weekdays: [],
       }),
       installedSkills: ["tdd", "diagrams"],
     });
@@ -449,6 +457,7 @@ describe("the page: where the cost goes", () => {
         sessionStartTokens: undefined,
         skills: [],
         agents: [],
+        weekdays: [],
       }),
     );
 
