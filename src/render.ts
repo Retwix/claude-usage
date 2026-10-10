@@ -391,7 +391,7 @@ ${tile("thinking", "Thinking", formatCost(sum(features.map((f) => f.thinkingCost
 ${tile("start", "Session start (tokens)", formatTokens(summary.sessionStartTokens))}
 </div>
 ${costDonut(features)}
-${weekdayChart(summary.weekdays)}
+${weekdayChart(summary.weekdays, order)}
 <div class="panel">
 <table class="features">
 <thead><tr>
@@ -413,17 +413,34 @@ ${weekdayChart(summary.weekdays)}
 
 const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-const dayColumn = (day: WeekdayUsage, label: string): string =>
-  `<div class="day" data-days="${escapeHtml(JSON.stringify(day.days))}">
+const dayColumn = (day: WeekdayUsage, label: string, order: ReadonlyArray<string>): string => {
+  const repos = new Set(
+    inLegendOrder(
+      day.days.flatMap((d) => d.repos),
+      order,
+    ).map((r) => r.repo),
+  );
+  const segments = [...repos]
+    .map(
+      (repo) =>
+        `<span class="wseg" tabindex="0" data-repo="${escapeHtml(repo)}" style="background:${repoVar(repo, order)}"></span>`,
+    )
+    .join("");
+  return `<div class="day" data-days="${escapeHtml(JSON.stringify(day.days))}">
 <div class="day-cost"></div>
+<div class="day-plot">${segments}</div>
 <div class="day-label">${label}</div>
 <div class="day-active"></div>
 </div>`;
+};
 
-const weekdayChart = (weekdays: ReadonlyArray<WeekdayUsage>): string =>
+const weekdayChart = (
+  weekdays: ReadonlyArray<WeekdayUsage>,
+  order: ReadonlyArray<string>,
+): string =>
   `<div class="panel chart" aria-label="Cost and active time by day of the week">
 <h2>By day of the week · average per day worked: cost above, active time below</h2>
-<div class="days">${weekdays.map((d, i) => dayColumn(d, WEEKDAY_LABELS[i] ?? "")).join("")}</div>
+<div class="days">${weekdays.map((d, i) => dayColumn(d, WEEKDAY_LABELS[i] ?? "", order)).join("")}</div>
 </div>`;
 
 const weekColumn = (week: WeekUsage, maxCost: number, order: ReadonlyArray<string>): string => {
@@ -542,7 +559,7 @@ table.tools th { cursor: default; }
 .weeks, .days { display: flex; align-items: flex-end; gap: 6px; }
 .week, .day { flex: 1; min-width: 28px; display: flex; flex-direction: column; align-items: stretch; }
 .week-total, .day-cost, .day-active { text-align: center; font-size: 11px; color: var(--ink-2); font-variant-numeric: tabular-nums; margin-bottom: 4px; white-space: nowrap; }
-.week-plot { height: 140px; display: flex; flex-direction: column-reverse; gap: 2px; border-bottom: 1px solid var(--grid); }
+.week-plot, .day-plot { height: 140px; display: flex; flex-direction: column-reverse; gap: 2px; border-bottom: 1px solid var(--grid); }
 .wseg { display: block; min-height: 2px; }
 .wseg:last-child { border-radius: 4px 4px 0 0; }
 .wseg:hover, .wseg:focus { filter: brightness(1.15); outline: none; }
@@ -634,14 +651,26 @@ const sum = (values) => values.reduce((a, b) => a + b, 0);
 const visibleRepos = (el) => JSON.parse(el.dataset.repos).filter((r) => !hidden.has(r.repo));
 const setCell = (td, sortValue, text) => { td.dataset.sort = sortValue; td.textContent = text; };
 
-const applyToDays = (section) => section.querySelectorAll(".day").forEach((day) => {
-  const worked = JSON.parse(day.dataset.days)
-    .map((d) => d.repos.filter((r) => !hidden.has(r.repo)))
-    .filter((repos) => repos.length > 0);
-  const average = (key) => sum(worked.flat().map((r) => r[key])) / Math.max(worked.length, 1);
-  day.querySelector(".day-cost").textContent = formatCost(average("costUsd"));
-  day.querySelector(".day-active").textContent = formatDuration(average("activeSeconds"));
-});
+const applyToDays = (section) => {
+  const days = [...section.querySelectorAll(".day")].map((day) => {
+    const worked = JSON.parse(day.dataset.days)
+      .map((d) => d.repos.filter((r) => !hidden.has(r.repo)))
+      .filter((repos) => repos.length > 0);
+    const average = (repos, key) => sum(repos.map((r) => r[key])) / Math.max(worked.length, 1);
+    return { day, repos: worked.flat(), average };
+  });
+  const maxCost = Math.max(...days.map(({ repos, average }) => average(repos, "costUsd")), Number.MIN_VALUE);
+  days.forEach(({ day, repos, average }) => {
+    day.querySelector(".day-cost").textContent = formatCost(average(repos, "costUsd"));
+    day.querySelector(".day-active").textContent = formatDuration(average(repos, "activeSeconds"));
+    day.querySelectorAll(".wseg").forEach((seg) => {
+      const own = repos.filter((r) => r.repo === seg.dataset.repo);
+      seg.hidden = hidden.has(seg.dataset.repo);
+      seg.style.height = (average(own, "costUsd") / maxCost) * 100 + "%";
+      seg.dataset.tip = formatCost(average(own, "costUsd")) + "|" + seg.dataset.repo + " · " + formatDuration(average(own, "activeSeconds"));
+    });
+  });
+};
 
 const applyToRange = (section) => {
   const shown = [...section.querySelectorAll("table.features tbody tr")].flatMap((tr) => {

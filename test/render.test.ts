@@ -138,6 +138,10 @@ const openPage = (report: Report, storage: ReadonlyMap<string, string> = new Map
           text(day.querySelector(".day-cost")),
           text(day.querySelector(".day-active")),
         ]),
+    dayTip: (label: string, repo: string) =>
+      [...(shownRange()?.querySelectorAll<HTMLElement>(".day") ?? [])]
+        .find((day) => text(day.querySelector(".day-label")) === label)
+        ?.querySelector<HTMLElement>(`.wseg[data-repo="${repo}"]`)?.dataset["tip"],
     weekTotal: (weekStart: string) =>
       text(document.querySelector(`[data-week="${weekStart}"] .week-total`)),
     features: () => shownRows().map((tr) => tr.dataset["feature"]),
@@ -329,25 +333,43 @@ describe("the page: weekly chart", () => {
 });
 
 describe("the page: by day of the week", () => {
-  test("each day averages cost and active time over the dates its shown repos worked", () => {
-    const wednesdays = [
-      {
-        date: "2026-09-30",
-        repos: [repoUsage("acme-backend", 40, 2), repoUsage("acme-docs", 20, 1)],
-      },
-      { date: "2026-10-07", repos: [repoUsage("acme-docs", 10, 1)] },
-    ];
-    const page = openPage(
+  const twoWednesdays = () =>
+    openPage(
       oneRange({
         ...twoFeatures(),
-        weekdays: [[], [], wednesdays, [], [], [], []].map((days) => ({ days })),
+        weekdays: [
+          [],
+          [],
+          [
+            {
+              date: "2026-09-30",
+              repos: [repoUsage("acme-backend", 40, 2), repoUsage("acme-docs", 20, 1)],
+            },
+            { date: "2026-10-07", repos: [repoUsage("acme-docs", 10, 1)] },
+          ],
+          [],
+          [],
+          [],
+          [],
+        ].map((days) => ({ days })),
       }),
     );
+
+  test("each day averages cost and active time over the dates its shown repos worked", () => {
+    const page = twoWednesdays();
     const averages = () => [page.weekday("Mon"), page.weekday("Wed")];
 
     expect(averages()).toEqual([[["$0.00", "0 min"]], [["$35", "2.0 h"]]]);
     page.toggle("acme-docs");
     expect(averages()).toEqual([[["$0.00", "0 min"]], [["$40", "2.0 h"]]]);
+  });
+
+  test("a repo's part of a day's bar shows its own average per day worked", () => {
+    const page = twoWednesdays();
+
+    expect(page.dayTip("Wed", "acme-backend")).toBe("$20|acme-backend · 1.0 h");
+    page.toggle("acme-docs");
+    expect(page.dayTip("Wed", "acme-backend")).toBe("$40|acme-backend · 2.0 h");
   });
 });
 
