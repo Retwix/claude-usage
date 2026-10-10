@@ -329,20 +329,25 @@ describe("the page: weekly chart", () => {
 });
 
 describe("the page: by day of the week", () => {
-  test("each day's cost and active time leave out hidden repos", () => {
-    const wednesday = [repoUsage("acme-backend", 40, 2), repoUsage("acme-docs", 20, 1)];
+  test("each day averages cost and active time over the dates its shown repos worked", () => {
+    const wednesdays = [
+      {
+        date: "2026-09-30",
+        repos: [repoUsage("acme-backend", 40, 2), repoUsage("acme-docs", 20, 1)],
+      },
+      { date: "2026-10-07", repos: [repoUsage("acme-docs", 10, 1)] },
+    ];
     const page = openPage(
       oneRange({
         ...twoFeatures(),
-        weekdays: [[], [], [{ date: "2026-09-30", repos: wednesday }], [], [], [], []].map(
-          (days) => ({ days }),
-        ),
+        weekdays: [[], [], wednesdays, [], [], [], []].map((days) => ({ days })),
       }),
     );
+    const averages = () => [page.weekday("Mon"), page.weekday("Wed")];
 
+    expect(averages()).toEqual([[["$0.00", "0 min"]], [["$35", "2.0 h"]]]);
     page.toggle("acme-docs");
-
-    expect(page.weekday("Wed")).toEqual([["$40", "2.0 h"]]);
+    expect(averages()).toEqual([[["$0.00", "0 min"]], [["$40", "2.0 h"]]]);
   });
 });
 

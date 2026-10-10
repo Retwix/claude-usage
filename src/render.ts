@@ -414,7 +414,7 @@ ${weekdayChart(summary.weekdays)}
 const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 const dayColumn = (day: WeekdayUsage, label: string): string =>
-  `<div class="day" data-repos="${reposAttribute(day.days.flatMap((d) => d.repos))}">
+  `<div class="day" data-days="${escapeHtml(JSON.stringify(day.days))}">
 <div class="day-cost"></div>
 <div class="day-label">${label}</div>
 <div class="day-active"></div>
@@ -422,7 +422,7 @@ const dayColumn = (day: WeekdayUsage, label: string): string =>
 
 const weekdayChart = (weekdays: ReadonlyArray<WeekdayUsage>): string =>
   `<div class="panel chart" aria-label="Cost and active time by day of the week">
-<h2>By day of the week · cost above, active time below</h2>
+<h2>By day of the week · average per day worked: cost above, active time below</h2>
 <div class="days">${weekdays.map((d, i) => dayColumn(d, WEEKDAY_LABELS[i] ?? "")).join("")}</div>
 </div>`;
 
@@ -635,9 +635,12 @@ const visibleRepos = (el) => JSON.parse(el.dataset.repos).filter((r) => !hidden.
 const setCell = (td, sortValue, text) => { td.dataset.sort = sortValue; td.textContent = text; };
 
 const applyToDays = (section) => section.querySelectorAll(".day").forEach((day) => {
-  const repos = visibleRepos(day);
-  day.querySelector(".day-cost").textContent = formatCost(sum(repos.map((r) => r.costUsd)));
-  day.querySelector(".day-active").textContent = formatDuration(sum(repos.map((r) => r.activeSeconds)));
+  const worked = JSON.parse(day.dataset.days)
+    .map((d) => d.repos.filter((r) => !hidden.has(r.repo)))
+    .filter((repos) => repos.length > 0);
+  const average = (key) => sum(worked.flat().map((r) => r[key])) / Math.max(worked.length, 1);
+  day.querySelector(".day-cost").textContent = formatCost(average("costUsd"));
+  day.querySelector(".day-active").textContent = formatDuration(average("activeSeconds"));
 });
 
 const applyToRange = (section) => {
