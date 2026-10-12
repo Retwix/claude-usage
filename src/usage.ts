@@ -145,6 +145,7 @@ type Timeline = { readonly feature: string; readonly moments: ReadonlyArray<Mome
 
 const CYCLE_PROMPT = /^Fresh session for task '([^']+)'/;
 const WORKTREE_PATH = /\/([\w.-]+)\/\.claude\/worktrees\/([\w.-]+)/g;
+const WORKTREE_FOLDER = /\/([\w .-]+)\/\.claude\/worktrees\/([\w.-]+)/g;
 const IDLE_CAP_MS = 5 * 60 * 1000;
 const LARGE_CONTEXT_TOKENS = 200_000;
 const FRESH_SESSION_TOKENS = 60_000;
@@ -266,10 +267,13 @@ const contextTokens = (record: TranscriptRecord): number | undefined => {
   );
 };
 
-const worktreeHits = (record: TranscriptRecord): ReadonlyArray<WorktreeHit> =>
-  [record.cwd ?? "", ...toolInputs(record)].flatMap((text) =>
-    [...text.matchAll(WORKTREE_PATH)].map(([, repo = "", slug = ""]) => ({ repo, slug })),
-  );
+const matchWorktrees = (text: string, pattern: RegExp): ReadonlyArray<WorktreeHit> =>
+  [...text.matchAll(pattern)].map(([, repo = "", slug = ""]) => ({ repo, slug }));
+
+const worktreeHits = (record: TranscriptRecord): ReadonlyArray<WorktreeHit> => [
+  ...matchWorktrees(record.cwd ?? "", WORKTREE_FOLDER),
+  ...toolInputs(record).flatMap((text) => matchWorktrees(text, WORKTREE_PATH)),
+];
 
 const transcripts = (
   session: TranscriptSession,
@@ -295,7 +299,7 @@ const mostWorkedWorktree = (session: TranscriptSession): string | undefined => {
 
 const launchFolder = (session: TranscriptSession): string => {
   const folder = session.records.find((r) => r.cwd)?.cwd ?? session.project;
-  return [...folder.matchAll(WORKTREE_PATH)][0]?.[1] ?? basename(folder);
+  return matchWorktrees(folder, WORKTREE_FOLDER)[0]?.repo ?? basename(folder);
 };
 
 const featureOf = (session: TranscriptSession): string =>
