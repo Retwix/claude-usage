@@ -293,8 +293,10 @@ const mostWorkedWorktree = (session: TranscriptSession): string | undefined => {
   )?.[0];
 };
 
-const launchFolder = (session: TranscriptSession): string =>
-  basename(session.records.find((r) => r.cwd)?.cwd ?? session.project);
+const launchFolder = (session: TranscriptSession): string => {
+  const folder = session.records.find((r) => r.cwd)?.cwd ?? session.project;
+  return [...folder.matchAll(WORKTREE_PATH)][0]?.[1] ?? basename(folder);
+};
 
 const featureOf = (session: TranscriptSession): string =>
   cycledTask(session) ?? mostWorkedWorktree(session) ?? `(${launchFolder(session)})`;
